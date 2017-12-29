@@ -9,6 +9,7 @@ node {
         )
     }
 
+
     stage('Tag Image') {
         openshiftTag (
             namespace:  'sock-shop',
