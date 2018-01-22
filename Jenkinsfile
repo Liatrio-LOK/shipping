@@ -1,19 +1,38 @@
 node {
     stage('Create Environment') {
+        // extract the branch and project name and create an OpenShift project with the same name
         script {
-            sh  '''
-                echo $(echo $JOB_NAME | awk 'match($0, /[a-zA-Z0-9-]*/) {print tolower(substr($0, RSTART, RLENGTH))}') > REPOSITORY;
-                echo $(echo $JOB_NAME | awk '{print tolower($0)}' | awk 'sub("/", "-")') > PROJECT_NAME;
-           
-                if ! oc describe project $(cat PROJECT_NAME); then
-                    oc new-project $(cat PROJECT_NAME) &&
-                    oc adm policy add-role-to-group admin $(cat REPOSITORY) --namespace=$(cat PROJECT_NAME) &&
-                    wget https://raw.githubusercontent.com/Liatrio-LOK/microservices-demo/LOK-115-POC/deploy/openshift/templates/lok_115_template.yaml &&
-                    oc create -f lok_115_template.yaml &&
-                    rm lok_115_template.yaml;
-                fi
-                '''
+            sh '''
+                folder=`echo $JOB_NAME | cut -d/ -f1 | awk '{print tolower($0)}'`
+                branch=`echo $BRANCH_NAME | awk '{print tolower($0)}'`
+                set +e
+                oc get projects | grep "$folder-$branch"
+                if [ $? -ne 0 ]; then
+                    oc new-project $folder-$branch &&
+                    #we assume people are in the group which corresponds to the folder name
+                    oc adm policy add-role-to-group admin $folder --namespace=$folder-$branch &&
+                    wget https://raw.githubusercontent.com/Liatrio-LOK/microservices-demo/master/deploy/openshift/templates/full_stack_template.yaml &&
+                    oc create -f full_stack_template.yaml &&
+                    rm full_stack_template.yaml
+                fi 
+            '''
         }
+    }
+
+    stage('Build Image') {
+        // build configurations only build the master branch unless otherwise specified
+        // pull out the latest commit hash to identify what we want to build
+        script {
+            commitId = sh (
+              script: ''' 
+                      git ls-remote git://github.com/Liatrio-LOK/front-end.git \
+                      | grep ${BRANCH_NAME} | cut -f 1
+                      ''',
+              returnStdout: true
+            ).trim()
+            
+            print commitId
+        } 
     }
 
     stage('Build Image') {
