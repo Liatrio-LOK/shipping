@@ -8,12 +8,12 @@ node {
                 set +e
                 oc get projects | grep "$folder-$branch"
                 if [ $? -ne 0 ]; then
-                    oc new-project $folder-$branch &&
+                    oc new-project "$folder-$branch" &&
                     #we assume people are in the group which corresponds to the folder name
-                    oc adm policy add-role-to-group admin $folder --namespace=$folder-$branch &&
-                    wget https://raw.githubusercontent.com/Liatrio-LOK/microservices-demo/master/deploy/openshift/templates/full_stack_template.yaml &&
-                    oc create -f full_stack_template.yaml &&
-                    rm full_stack_template.yaml
+                    oc adm policy add-role-to-group admin $folder --namespace="$folder-$branch" &&
+                    wget https://raw.githubusercontent.com/Liatrio-LOK/microservices-demo/master/deploy/openshift/templates/full_stack_namespace_template.yaml &&
+                    oc create -f full_stack_namespace_template.yaml &&
+                    rm full_stack_namespace_template.yaml
                 fi 
             '''
         }
